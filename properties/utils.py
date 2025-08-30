@@ -18,21 +18,29 @@ def get_all_properties():
 
 
 def get_redis_cache_metrics():
-    # Connect to Redis through django-redis
-    redis_conn = get_redis_connection("default")
-    info = redis_conn.info("stats")
+    try:
+        # Connect to Redis
+        redis_conn = get_redis_connection("default")
+        info = redis_conn.info("stats")
 
-    hits = info.get("keyspace_hits", 0)
-    misses = info.get("keyspace_misses", 0)
-    total = hits + misses
+        hits = info.get("keyspace_hits", 0)
+        misses = info.get("keyspace_misses", 0)
+        total_requests = hits + misses
 
-    hit_ratio = (hits / total) if total > 0 else 0
+        if total_requests > 0:
+            hit_ratio = hits / total_requests
+        else:
+            hit_ratio = 0
 
-    metrics = {
-        "hits": hits,
-        "misses": misses,
-        "hit_ratio": round(hit_ratio, 2),
-    }
+        metrics = {
+            "hits": hits,
+            "misses": misses,
+            "hit_ratio": round(hit_ratio, 2),
+        }
 
-    logger.info(f"Redis Cache Metrics: {metrics}")
-    return metrics
+        logger.info(f"Redis Cache Metrics: {metrics}")
+        return metrics
+
+    except Exception as e:
+        logger.error(f"Error retrieving Redis metrics: {e}")
+        return {"error": str(e)}
